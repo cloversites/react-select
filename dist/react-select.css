@@ -1,6 +1,6 @@
 /**
- * React Select
- * ============
+ * React Select (Clover’s Fork)
+ * ============================
  * Created by Jed Watson and Joss Mackison for KeystoneJS, http://www.keystonejs.com/
  * https://twitter.com/jedwatson https://twitter.com/jossmackison https://twitter.com/keystonejs
  * MIT License: https://github.com/JedWatson/react-select
@@ -414,6 +414,13 @@
 .Select--multi.is-disabled .Select-value-icon:focus,
 .Select--multi.is-disabled .Select-value-icon:active {
   background-color: #fcfcfc;
+}
+.Select--collated .Select-value-label {
+  display: block;
+  width: calc(100% - 1em);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @keyframes Select-animation-spin {
   to {

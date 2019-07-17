@@ -73,6 +73,13 @@ const handleRequired = (value, multi) => {
 	return (multi ? value.length === 0 : Object.keys(value).length === 0);
 };
 
+const collateValues = (values) => {
+	return {
+		label: values.map(value => value.label).join(', '),
+		value: values.map(value => value.value).join(', ')
+	};
+};
+
 class Select extends React.Component {
 	constructor (props) {
 		super(props);
@@ -813,24 +820,43 @@ class Select extends React.Component {
 		}
 		let onClick = this.props.onValueClick ? this.handleValueClick : null;
 		if (this.props.multi) {
-			return valueArray.map((value, i) => {
-				return (
-					<ValueComponent
-						disabled={this.props.disabled || value.clearableValue === false}
-						id={`${this._instancePrefix}-value-${i}`}
-						instancePrefix={this._instancePrefix}
-						key={`value-${i}-${value[this.props.valueKey]}`}
-						onClick={onClick}
-						onRemove={this.removeValue}
-						placeholder={this.props.placeholder}
-						value={value}
-						values={valueArray}
-					>
-						{renderLabel(value, i)}
-						<span className="Select-aria-only">&nbsp;</span>
-					</ValueComponent>
-				);
-			});
+			if (this.props.collateValues) {
+				if (shouldShowValue(this.state, this.props)) {
+					if (isOpen) onClick = null;
+					const collatedValue = collateValues(valueArray);
+					return (
+						<ValueComponent
+							disabled={this.props.disabled}
+							id={`${this._instancePrefix}-value-item`}
+							instancePrefix={this._instancePrefix}
+							onClick={onClick}
+							placeholder={this.props.placeholder}
+							value={collatedValue}
+						>
+							{renderLabel(collatedValue)}
+						</ValueComponent>
+					);
+				}
+			} else {
+				return valueArray.map((value, i) => {
+					return (
+						<ValueComponent
+							disabled={this.props.disabled || value.clearableValue === false}
+							id={`${this._instancePrefix}-value-${i}`}
+							instancePrefix={this._instancePrefix}
+							key={`value-${i}-${value[this.props.valueKey]}`}
+							onClick={onClick}
+							onRemove={this.removeValue}
+							placeholder={this.props.placeholder}
+							value={value}
+							values={valueArray}
+						>
+							{renderLabel(value, i)}
+							<span className="Select-aria-only">&nbsp;</span>
+						</ValueComponent>
+					);
+				});
+			}
 		} else if (shouldShowValue(this.state, this.props)) {
 			if (isOpen) onClick = null;
 			return (
@@ -1137,9 +1163,10 @@ class Select extends React.Component {
 			'is-open': isOpen,
 			'is-pseudo-focused': this.state.isPseudoFocused,
 			'is-searchable': this.props.searchable,
-			'Select--multi': this.props.multi,
+			'Select--multi': this.props.multi && !this.props.collateValues,
 			'Select--rtl': this.props.rtl,
-			'Select--single': !this.props.multi,
+			'Select--single': !this.props.multi || this.props.collateValues,
+			'Select--collated': this.props.collateValues
 		});
 
 		let removeMessage = null;
@@ -1202,6 +1229,7 @@ Select.propTypes = {
 	clearValueText: stringOrNode,         // title for the "clear" control
 	clearable: PropTypes.bool,            // should it be possible to reset value
 	closeOnSelect: PropTypes.bool,        // whether to close the menu when a value is selected
+	collateValues: PropTypes.bool,        // whether all values should be displayed as comma-separated text
 	deleteRemoves: PropTypes.bool,        // whether delete removes an item if there is no text input
 	delimiter: PropTypes.string,          // delimiter to use to join multiple values for the hidden field value
 	disabled: PropTypes.bool,             // whether the Select is disabled or not
@@ -1274,6 +1302,7 @@ Select.defaultProps = {
 	clearRenderer: defaultClearRenderer,
 	clearValueText: 'Clear value',
 	closeOnSelect: true,
+	collateValues: false,
 	deleteRemoves: true,
 	delimiter: ',',
 	disabled: false,

@@ -415,7 +415,7 @@
 .Select--multi.is-disabled .Select-value-icon:active {
   background-color: #fcfcfc;
 }
-.Select--collated .Select-value-label {
+.Select--comma-separated .Select-value-label {
   display: block;
   width: calc(100% - 1em);
   white-space: nowrap;

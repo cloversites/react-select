@@ -73,7 +73,7 @@ const handleRequired = (value, multi) => {
 	return (multi ? value.length === 0 : Object.keys(value).length === 0);
 };
 
-const collateValues = (values) => {
+const commaSeparatedValues = (values) => {
 	return {
 		label: values.map(value => value.label).join(', '),
 		value: values.map(value => value.value).join(', ')
@@ -820,10 +820,10 @@ class Select extends React.Component {
 		}
 		let onClick = this.props.onValueClick ? this.handleValueClick : null;
 		if (this.props.multi) {
-			if (this.props.collateValues) {
+			if (this.props.commaSeparatedValues) {
 				if (shouldShowValue(this.state, this.props)) {
 					if (isOpen) onClick = null;
-					const collatedValue = collateValues(valueArray);
+					const commaSeparatedValue = commaSeparatedValues(valueArray);
 					return (
 						<ValueComponent
 							disabled={this.props.disabled}
@@ -831,9 +831,9 @@ class Select extends React.Component {
 							instancePrefix={this._instancePrefix}
 							onClick={onClick}
 							placeholder={this.props.placeholder}
-							value={collatedValue}
+							value={commaSeparatedValue}
 						>
-							{renderLabel(collatedValue)}
+							{renderLabel(commaSeparatedValue)}
 						</ValueComponent>
 					);
 				}
@@ -1163,10 +1163,10 @@ class Select extends React.Component {
 			'is-open': isOpen,
 			'is-pseudo-focused': this.state.isPseudoFocused,
 			'is-searchable': this.props.searchable,
-			'Select--multi': this.props.multi && !this.props.collateValues,
+			'Select--multi': this.props.multi && !this.props.commaSeparatedValues,
 			'Select--rtl': this.props.rtl,
-			'Select--single': !this.props.multi || this.props.collateValues,
-			'Select--collated': this.props.collateValues
+			'Select--single': !this.props.multi || this.props.commaSeparatedValues,
+			'Select--comma-separated': this.props.commaSeparatedValues
 		});
 
 		let removeMessage = null;
@@ -1229,7 +1229,7 @@ Select.propTypes = {
 	clearValueText: stringOrNode,         // title for the "clear" control
 	clearable: PropTypes.bool,            // should it be possible to reset value
 	closeOnSelect: PropTypes.bool,        // whether to close the menu when a value is selected
-	collateValues: PropTypes.bool,        // whether all values should be displayed as comma-separated text
+	commaSeparatedValues: PropTypes.bool,   // whether all values should be displayed as comma-separated text
 	deleteRemoves: PropTypes.bool,        // whether delete removes an item if there is no text input
 	delimiter: PropTypes.string,          // delimiter to use to join multiple values for the hidden field value
 	disabled: PropTypes.bool,             // whether the Select is disabled or not
@@ -1302,7 +1302,7 @@ Select.defaultProps = {
 	clearRenderer: defaultClearRenderer,
 	clearValueText: 'Clear value',
 	closeOnSelect: true,
-	collateValues: false,
+	commaSeparatedValues: false,
 	deleteRemoves: true,
 	delimiter: ',',
 	disabled: false,

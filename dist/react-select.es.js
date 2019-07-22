@@ -698,6 +698,17 @@ var handleRequired = function handleRequired(value, multi) {
 	return multi ? value.length === 0 : Object.keys(value).length === 0;
 };
 
+var commaSeparatedValues = function commaSeparatedValues(values) {
+	return {
+		label: values.map(function (value) {
+			return value.label;
+		}).join(', '),
+		value: values.map(function (value) {
+			return value.value;
+		}).join(', ')
+	};
+};
+
 var Select$1 = function (_React$Component) {
 	inherits(Select, _React$Component);
 
@@ -1514,28 +1525,47 @@ var Select$1 = function (_React$Component) {
 			}
 			var onClick = this.props.onValueClick ? this.handleValueClick : null;
 			if (this.props.multi) {
-				return valueArray.map(function (value, i) {
-					return React.createElement(
-						ValueComponent,
-						{
-							disabled: _this5.props.disabled || value.clearableValue === false,
-							id: _this5._instancePrefix + '-value-' + i,
-							instancePrefix: _this5._instancePrefix,
-							key: 'value-' + i + '-' + value[_this5.props.valueKey],
-							onClick: onClick,
-							onRemove: _this5.removeValue,
-							placeholder: _this5.props.placeholder,
-							value: value,
-							values: valueArray
-						},
-						renderLabel(value, i),
-						React.createElement(
-							'span',
-							{ className: 'Select-aria-only' },
-							'\xA0'
-						)
-					);
-				});
+				if (this.props.commaSeparatedValues) {
+					if (shouldShowValue(this.state, this.props)) {
+						if (isOpen) onClick = null;
+						var commaSeparatedValue = commaSeparatedValues(valueArray);
+						return React.createElement(
+							ValueComponent,
+							{
+								disabled: this.props.disabled,
+								id: this._instancePrefix + '-value-item',
+								instancePrefix: this._instancePrefix,
+								onClick: onClick,
+								placeholder: this.props.placeholder,
+								value: commaSeparatedValue
+							},
+							renderLabel(commaSeparatedValue)
+						);
+					}
+				} else {
+					return valueArray.map(function (value, i) {
+						return React.createElement(
+							ValueComponent,
+							{
+								disabled: _this5.props.disabled || value.clearableValue === false,
+								id: _this5._instancePrefix + '-value-' + i,
+								instancePrefix: _this5._instancePrefix,
+								key: 'value-' + i + '-' + value[_this5.props.valueKey],
+								onClick: onClick,
+								onRemove: _this5.removeValue,
+								placeholder: _this5.props.placeholder,
+								value: value,
+								values: valueArray
+							},
+							renderLabel(value, i),
+							React.createElement(
+								'span',
+								{ className: 'Select-aria-only' },
+								'\xA0'
+							)
+						);
+					});
+				}
 			} else if (shouldShowValue(this.state, this.props)) {
 				if (isOpen) onClick = null;
 				return React.createElement(
@@ -1849,9 +1879,10 @@ var Select$1 = function (_React$Component) {
 				'is-open': isOpen,
 				'is-pseudo-focused': this.state.isPseudoFocused,
 				'is-searchable': this.props.searchable,
-				'Select--multi': this.props.multi,
+				'Select--multi': this.props.multi && !this.props.commaSeparatedValues,
 				'Select--rtl': this.props.rtl,
-				'Select--single': !this.props.multi
+				'Select--single': !this.props.multi || this.props.commaSeparatedValues,
+				'Select--comma-separated': this.props.commaSeparatedValues
 			});
 
 			var removeMessage = null;
@@ -1919,6 +1950,7 @@ Select$1.propTypes = {
 	clearValueText: stringOrNode, // title for the "clear" control
 	clearable: PropTypes.bool, // should it be possible to reset value
 	closeOnSelect: PropTypes.bool, // whether to close the menu when a value is selected
+	commaSeparatedValues: PropTypes.bool, // whether all values should be displayed as comma-separated text
 	deleteRemoves: PropTypes.bool, // whether delete removes an item if there is no text input
 	delimiter: PropTypes.string, // delimiter to use to join multiple values for the hidden field value
 	disabled: PropTypes.bool, // whether the Select is disabled or not
@@ -1991,6 +2023,7 @@ Select$1.defaultProps = {
 	clearRenderer: clearRenderer,
 	clearValueText: 'Clear value',
 	closeOnSelect: true,
+	commaSeparatedValues: false,
 	deleteRemoves: true,
 	delimiter: ',',
 	disabled: false,

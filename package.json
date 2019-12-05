@@ -15,7 +15,7 @@
   "dependencies": {
     "classnames": "^2.2.4",
     "prop-types": "^15.5.8",
-    "react-input-autosize": "^2.1.2",
+    "@cloversites/react-input-autosize": "2.2.2-cc45ff6",
     "react-lifecycles-compat": "^3.0.4"
   },
   "devDependencies": {

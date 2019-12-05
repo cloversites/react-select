@@ -9,7 +9,7 @@ const globals = {
 	classnames: 'classNames',
 	'prop-types': 'PropTypes',
 	'react-dom': 'ReactDOM',
-	'react-input-autosize': 'AutosizeInput',
+	'@cloversites/react-input-autosize': 'AutosizeInput',
 	react: 'React',
 };
 const external = Object.keys(globals);

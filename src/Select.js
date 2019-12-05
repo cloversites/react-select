@@ -7,6 +7,7 @@ import AutosizeInput from 'react-input-autosize';
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
+import { polyfill } from 'react-lifecycles-compat';
 import { findDOMNode } from 'react-dom';
 
 import defaultArrowRenderer from './utils/defaultArrowRenderer';
@@ -80,6 +81,38 @@ const commaSeparatedValues = (values) => {
 	};
 };
 
+const handleInputValueChange = (props, newValue) => {
+	if (props.onInputChange) {
+		let nextState = props.onInputChange(newValue);
+		// Note: != used deliberately here to catch undefined and null
+		if (nextState != null && typeof nextState !== 'object') {
+			newValue = '' + nextState;
+		}
+	}
+	return newValue;
+};
+
+/**
+ * Turns a value into an array from the given options
+ * @param {Object}		props		- props, including the value of the select input
+ * @returns	{Array}	the value of the select represented in an array
+ */
+const getValueArray = (props) => {
+	let { value } = props;
+	if (props.multi) {
+		if (typeof value === 'string') {
+			value = value.split(props.delimiter);
+		}
+		if (!Array.isArray(value)) {
+			if (value === null || value === undefined) return [];
+			value = [value];
+		}
+		return value.map(value => expandValue(value, props)).filter(i => i);
+	}
+	const expandedValue = expandValue(value, props);
+	return expandedValue ? [expandedValue] : [];
+};
+
 class Select extends React.Component {
 	constructor (props) {
 		super(props);
@@ -90,7 +123,6 @@ class Select extends React.Component {
 			'handleInputBlur',
 			'handleInputChange',
 			'handleInputFocus',
-			'handleInputValueChange',
 			'handleKeyDown',
 			'handleMenuScroll',
 			'handleMouseDown',
@@ -108,22 +140,20 @@ class Select extends React.Component {
 		].forEach((fn) => this[fn] = this[fn].bind(this));
 
 		this.state = {
+			lastRequired: props.required,
+			lastValue: props.value,
 			inputValue: '',
 			isFocused: false,
 			isOpen: false,
 			isPseudoFocused: false,
 			required: false,
 		};
-	}
 
-	componentWillMount () {
-		this._instancePrefix = `react-select-${(this.props.instanceId || ++instanceId)}-`;
-		const valueArray = this.getValueArray(this.props.value);
+		this._instancePrefix = `react-select-${(props.instanceId || ++instanceId)}-`;
+		const valueArray = getValueArray(props);
 
-		if (this.props.required) {
-			this.setState({
-				required: handleRequired(valueArray[0], this.props.multi),
-			});
+		if (props.required) {
+			this.state.required = handleRequired(valueArray[0], props.multi);
 		}
 	}
 
@@ -136,21 +166,27 @@ class Select extends React.Component {
 		}
 	}
 
-	componentWillReceiveProps (nextProps) {
-		const valueArray = this.getValueArray(nextProps.value, nextProps);
+	static getDerivedStateFromProps (props, state) {
+		const valueArray = getValueArray(props);
+		let derivedState = null;
 
-		if (nextProps.required) {
-			this.setState({
-				required: handleRequired(valueArray[0], nextProps.multi),
-			});
-		} else if (this.props.required) {
+		if (props.required) {
+			derivedState = derivedState || {};
+			derivedState.required = handleRequired(valueArray[0], props.multi);
+		} else if (state.lastRequired) {
 			// Used to be required but it's not any more
-			this.setState({ required: false });
+			derivedState = derivedState || {};
+			derivedState.lastRequired = props.required;
+			derivedState.required = false;
 		}
 
-		if (this.state.inputValue && this.props.value !== nextProps.value && nextProps.onSelectResetsInput) {
-			this.setState({ inputValue: this.handleInputValueChange('') });
+		if (state.inputValue && state.lastValue !== props.value && props.onSelectResetsInput) {
+			derivedState = derivedState || {};
+			derivedState.lastValue = props.value;
+			derivedState.inputValue = handleInputValueChange(props, '');
 		}
+
+		return derivedState;
 	}
 
 	componentDidUpdate (prevProps, prevState) {
@@ -373,7 +409,7 @@ class Select extends React.Component {
 	closeMenu () {
 		if(this.props.onCloseResetsInput) {
 			this.setState({
-				inputValue: this.handleInputValueChange(''),
+				inputValue: handleInputValueChange(this.props, ''),
 				isOpen: false,
 				isPseudoFocused: this.state.isFocused && !this.props.multi,
 			});
@@ -421,7 +457,7 @@ class Select extends React.Component {
 			isPseudoFocused: false,
 		};
 		if (this.props.onBlurResetsInput) {
-			onBlurredState.inputValue = this.handleInputValueChange('');
+			onBlurredState.inputValue = handleInputValueChange(this.props, '');
 		}
 		this.setState(onBlurredState);
 	}
@@ -430,7 +466,7 @@ class Select extends React.Component {
 		let newInputValue = event.target.value;
 
 		if (this.state.inputValue !== event.target.value) {
-			newInputValue = this.handleInputValueChange(newInputValue);
+			newInputValue = handleInputValueChange(this.props, newInputValue);
 		}
 
 		this.setState({
@@ -450,17 +486,6 @@ class Select extends React.Component {
 		this.setState({
 			inputValue: newValue
 		});
-	}
-
-	handleInputValueChange(newValue) {
-		if (this.props.onInputChange) {
-			let nextState = this.props.onInputChange(newValue);
-			// Note: != used deliberately here to catch undefined and null
-			if (nextState != null && typeof nextState !== 'object') {
-				newValue = '' + nextState;
-			}
-		}
-		return newValue;
 	}
 
 	handleKeyDown (event) {
@@ -574,29 +599,6 @@ class Select extends React.Component {
 		return op[this.props.labelKey];
 	}
 
-	/**
-	 * Turns a value into an array from the given options
-	 * @param {String|Number|Array} value		- the value of the select input
-	 * @param {Object}		nextProps	- optionally specify the nextProps so the returned array uses the latest configuration
-	 * @returns	{Array}	the value of the select represented in an array
-	 */
-	getValueArray (value, nextProps = undefined) {
-		/** support optionally passing in the `nextProps` so `componentWillReceiveProps` updates will function as expected */
-		const props = typeof nextProps === 'object' ? nextProps : this.props;
-		if (props.multi) {
-			if (typeof value === 'string') {
-				value = value.split(props.delimiter);
-			}
-			if (!Array.isArray(value)) {
-				if (value === null || value === undefined) return [];
-				value = [value];
-			}
-			return value.map(value => expandValue(value, props)).filter(i => i);
-		}
-		const expandedValue = expandValue(value, props);
-		return expandedValue ? [expandedValue] : [];
-	}
-
 	setValue (value) {
 		if (this.props.autoBlur) {
 			this.blurInput();
@@ -623,10 +625,10 @@ class Select extends React.Component {
 		if (this.props.multi) {
 			this.setState({
 				focusedIndex: null,
-				inputValue: this.handleInputValueChange(updatedValue),
+				inputValue: handleInputValueChange(this.props, updatedValue),
 				isOpen: !this.props.closeOnSelect,
 			}, () => {
-				const valueArray = this.getValueArray(this.props.value);
+				const valueArray = getValueArray(this.props);
 				if (valueArray.some(i => i[this.props.valueKey] === value[this.props.valueKey])) {
 					this.removeValue(value);
 				} else {
@@ -635,7 +637,7 @@ class Select extends React.Component {
 			});
 		} else {
 			this.setState({
-				inputValue: this.handleInputValueChange(updatedValue),
+				inputValue: handleInputValueChange(this.props, updatedValue),
 				isOpen: !this.props.closeOnSelect,
 				isPseudoFocused: this.state.isFocused,
 			}, () => {
@@ -645,7 +647,7 @@ class Select extends React.Component {
 	}
 
 	addValue (value) {
-		let valueArray = this.getValueArray(this.props.value);
+		let valueArray = getValueArray(this.props);
 		const visibleOptions = this._visibleOptions.filter(val => !val.disabled);
 		const lastValueIndex = visibleOptions.indexOf(value);
 		this.setValue(valueArray.concat(value));
@@ -660,14 +662,14 @@ class Select extends React.Component {
 	}
 
 	popValue () {
-		let valueArray = this.getValueArray(this.props.value);
+		let valueArray = getValueArray(this.props);
 		if (!valueArray.length) return;
 		if (valueArray[valueArray.length-1].clearableValue === false) return;
 		this.setValue(this.props.multi ? valueArray.slice(0, valueArray.length - 1) : null);
 	}
 
 	removeValue (value) {
-		let valueArray = this.getValueArray(this.props.value);
+		let valueArray = getValueArray(this.props);
 		this.setValue(valueArray.filter(i => i[this.props.valueKey] !== value[this.props.valueKey]));
 		this.focus();
 	}
@@ -683,7 +685,7 @@ class Select extends React.Component {
 
 		this.setValue(this.getResetValue());
 		this.setState({
-			inputValue: this.handleInputValueChange(''),
+			inputValue: handleInputValueChange(this.props, ''),
 			isOpen: false,
 		}, this.focus);
 
@@ -955,7 +957,7 @@ class Select extends React.Component {
 	}
 
 	renderClear () {
-		const valueArray = this.getValueArray(this.props.value);
+		const valueArray = getValueArray(this.props);
 		if (!this.props.clearable
 			|| !valueArray.length
 			|| this.props.disabled
@@ -1142,7 +1144,7 @@ class Select extends React.Component {
 	}
 
 	render () {
-		let valueArray = this.getValueArray(this.props.value);
+		let valueArray = getValueArray(this.props);
 		let options = this._visibleOptions = this.filterOptions(this.props.multi && this.props.removeSelected ? valueArray : null);
 		let isOpen = this.state.isOpen;
 		if (this.props.multi && !options.length && valueArray.length && !this.state.inputValue) isOpen = false;
@@ -1338,5 +1340,7 @@ Select.defaultProps = {
 	valueComponent: Value,
 	valueKey: 'value',
 };
+
+polyfill(Select);
 
 export default Select;

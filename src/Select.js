@@ -157,15 +157,6 @@ class Select extends React.Component {
 		}
 	}
 
-	componentDidMount () {
-		if (typeof this.props.autofocus !== 'undefined' && typeof console !== 'undefined') {
-			console.warn('Warning: The autofocus prop has changed to autoFocus, support will be removed after react-select@1.0');
-		}
-		if (this.props.autoFocus || this.props.autofocus) {
-			this.focus();
-		}
-	}
-
 	static getDerivedStateFromProps (props, state) {
 		const valueArray = getValueArray(props);
 		let derivedState = null;
@@ -187,6 +178,15 @@ class Select extends React.Component {
 		}
 
 		return derivedState;
+	}
+
+	componentDidMount () {
+		if (typeof this.props.autofocus !== 'undefined' && typeof console !== 'undefined') {
+			console.warn('Warning: The autofocus prop has changed to autoFocus, support will be removed after react-select@1.0');
+		}
+		if (this.props.autoFocus || this.props.autofocus) {
+			this.focus();
+		}
 	}
 
 	componentDidUpdate (prevProps, prevState) {
